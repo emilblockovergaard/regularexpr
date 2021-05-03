@@ -88,6 +88,8 @@ if __name__ == '__main__':
     left_1 = Expr()
     left_1.var_ref = var_c
 
+    print("test")
+
     my_or.add_child(left_1)
     my_or.add_child(my_and)
 
