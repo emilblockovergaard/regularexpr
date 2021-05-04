@@ -12,7 +12,7 @@
 
 class Expr:
     var_ref = None      # Reference to variable
-
+    var_as_str = ""
     l_child = None      # Children
     r_child = None
 
@@ -34,8 +34,21 @@ class Expr:
             self.r_child = child
             return True
 
-        print("Error node is full! Can't add child!")
-        return False
+        self.l_child.add_child(child)
+        return True
+
+    def print_tree(self, depth, is_right = False):
+
+        if self.l_child is not None:
+            self.l_child.print_tree(depth+1, False)
+        if self.r_child is not None:
+            self.r_child.print_tree(depth+1, True)
+        print("\t" * depth, end = "")
+        if is_right:
+            print("R: ", end= "")
+        else:
+            print("L: ", end="")
+        print(self.var_as_str)
 
 class OrExpr(Expr):
     def print_expr_type(self):
@@ -154,9 +167,17 @@ if __name__ == '__main__':
 
     head = AndExpr()
     for i in range(0, len(subs)):
-        print(head.add_child(subs[i]))
+        new_child = None
+        if subs[i].find("|"):
+            new_child = OrExpr()
+        else:
+            new_child = AndExpr()
 
+        new_child.var_as_str = subs[i]
 
+        head.add_child(new_child) # NEEDS TO BE CHANGED,, so it doesnt add strings to the head but adds expressions, maybe also add a reference to a hash map/table
+
+    head.print_tree(0)
 
     #print("Left par: %d \t Right par: %d" % (first_right, first_left))
 
