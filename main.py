@@ -3,15 +3,20 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
+# Sikre at expr virker korrekt
+# Input, tjek det er korrekt
+
+# Plausability table
+
+# Consistency check
 
 class Expr:
-    is_true = False     # What the node evaluates to
     var_ref = None      # Reference to variable
+
     l_child = None      # Children
     r_child = None
 
     def __init__(self):
-        is_true = False
         variable_ref = None
 
     def print_expr_type(self):
@@ -39,6 +44,8 @@ class OrExpr(Expr):
     def evaluate(self):
         return self.r_child.evaluate() or self.l_child.evaluate()
 
+
+
 class AndExpr(Expr):
     def print_expr_type(self):
         print("Im an AND expr!")
@@ -57,12 +64,27 @@ class NotExpr(Expr):
         print("Im a NOT expr!")
 
     def evaluate(self):
-        return not self.is_true
+        return not self.l_child.evaluate()
+
+
+
+class ParenPairs:
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def is_index_in_pair(self, x):
+        if self.right > x > self.left:
+            return True
+        else:
+            return False
+
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
+    belief_base = []
     # First we try to implement expression: "(A&B)|C" into our code simply being able to represent it
     # Then we might add how to input a expression
     # Then we can add revision and stuff
@@ -70,7 +92,7 @@ if __name__ == '__main__':
     # Variables/table
     var_a = True
     var_b = False
-    var_c = False
+    var_c = True
 
     my_and = AndExpr()
 
@@ -93,6 +115,49 @@ if __name__ == '__main__':
     my_or.add_child(left_1)
     my_or.add_child(my_and)
 
-    print("Eval2: "+ str(my_or.evaluate()))
+    belief_base.append(my_or)
+
+    for i in belief_base:
+        print("Eval: " + str(i.evaluate()))
+
+    #print("Eval2: "+ str(my_or.evaluate()))
+
+    str_in = input("Input a belief in CN-Form: ")
+    # Find pairs of "(" and ")"
+    # Test string: ((A&B)&(C|B))&(A|B)      CNF form ->     A & B & (C|B) & (A|B)
+    # (A&B)&C -> A&B&C
+
+    pair_list = []
+
+    str_in = str_in.replace(" ","")
+    print(str_in)
+
+    left_par = 0
+    right_par = 0
+    for chara in str_in:
+        if chara == '(':
+            left_par += 1
+        if chara == ')':
+            right_par += 1
+
+    if left_par != right_par:
+        print("Error in input not equal amount of parenthesis!")
+    else:
+        print("Left par: %d \t Right par: %d" % (left_par, right_par))
+
+    # things = []
+
+    subs = str_in.split("&")
+
+    for x in subs:
+        print(x)
+
+    head = AndExpr()
+    for i in range(0, len(subs)):
+        print(head.add_child(subs[i]))
+
+
+
+    #print("Left par: %d \t Right par: %d" % (first_right, first_left))
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
