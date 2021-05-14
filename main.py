@@ -1,8 +1,6 @@
 # This is a sample Python script.
-from sympy.logic.boolalg import to_cnf
-from sympy import *
-from sympy.abc import A, B, D
 
+from sympy import *
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
@@ -210,7 +208,7 @@ if __name__ == '__main__':
     # print("Eval2: "+ str(my_or.evaluate()))
 
     str_in = input("Input a belief in CN-Form: ")
-    str_in = "~(A|B) & (C | D) & C"
+    str_in = "~(A|B) & (C >> D) & C" # Remove this
     str_in = str(convert_print_to_cnf(str_in))
     str_in = remove_exess(str_in)
     print(str_in)
@@ -234,7 +232,7 @@ if __name__ == '__main__':
         print("Left par: %d \t Right par: %d" % (left_par, right_par))
 
 
-    andElems = str_in.split("&")
+    andElems = str_in.split("&") # Create array of elements separated by AND's
     orElems = []
     for x in range(0, len(andElems)):
         orElems.append(andElems[x].split("|"))
@@ -247,8 +245,14 @@ if __name__ == '__main__':
         for element in orElems[i]:
             print("variables: " + element)
             variables.add_elem(element)
+
     variables.print_elems()
 
+
+def create_exr_from_string(string_in):
+    head_expr = Expr()
+    if "|" in string_in:
+        new_expr = OrExpr()
 
 
 
