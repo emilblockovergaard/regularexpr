@@ -1,5 +1,7 @@
 # This is a sample Python script.
-
+from sympy.logic.boolalg import to_cnf
+from sympy import *
+from sympy.abc import A, B, D
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
@@ -9,6 +11,12 @@
 # Plausability table
 
 # Consistency check
+def convertAndPrintCNF(expr_inpt):
+    expr_inpt = expr_inpt.split(",")
+    CNF_array  = []
+    for i in range(0, len(expr_inpt)):
+        CNF_array.append(to_cnf(expr_inpt[i]))
+    return CNF_array
 
 class Expr:
     var_ref = None      # Reference to variable
@@ -136,14 +144,13 @@ if __name__ == '__main__':
     #print("Eval2: "+ str(my_or.evaluate()))
 
     str_in = input("Input a belief in CN-Form: ")
+    str_in = str(convertAndPrintCNF(str_in))
+    print(str_in)
     # Find pairs of "(" and ")"
     # Test string: ((A&B)&(C|B))&(A|B)      CNF form ->     A & B & (C|B) & (A|B)
     # (A&B)&C -> A&B&C
 
     pair_list = []
-
-    str_in = str_in.replace(" ","")
-    print(str_in)
 
     left_par = 0
     right_par = 0
