@@ -66,6 +66,7 @@ class Expr:
         else:
             print("Not: ", end="")
 
+        print(type(self), end="  ")
         print(self.var_as_str)
 
         if self.l_child is not None and isinstance(self, NotExpr):
@@ -206,6 +207,23 @@ def create_not_expr(start_node, list_in):
     list_in.pop(0)
     start_node.add_child(child)
 
+def generate_and_tree(and_list_in):
+    tree_head = AndExpr()
+
+    print(and_list_in)
+    while len(and_list_in)> 1:
+        print("Combining a pair")
+        combined = AndExpr()
+        combined.add_child(and_list_in[0])
+        combined.add_child(and_list_in[1])
+        and_list_in.pop(0)
+        and_list_in.pop(0)
+        and_list_in.append(combined)
+    else:
+        print("Only 2 or less nodes!")
+    print(and_list_in)
+
+    return and_list_in[0]
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -220,7 +238,7 @@ if __name__ == '__main__':
 
     str_in = input("Input a belief in CN-Form (make sure it's valid!): ")
     #str_in = "(A|B|C) & ~D" # Remove this
-    str_in = "(A|B|C|D) & ~G" # Remove this
+    str_in = "(A|B|C|D) & G & K & P & ~L & ~M" # Remove this
     str_in = str(convert_print_to_cnf(str_in))
     str_in = remove_exess(str_in)
     print(str_in)
@@ -265,6 +283,7 @@ if __name__ == '__main__':
     or_head = None
     not_head = None
     and_head = AndExpr()
+    and_heads = []
     print("Printing or-elems: ", end="")
     print(orElems)
     print("\nPrinting or elems: ")
@@ -275,16 +294,27 @@ if __name__ == '__main__':
             not_head = NotExpr()
             create_not_expr(not_head, x)
             and_head.add_child(not_head)
+            and_heads.append(not_head)
         else:
-            print("It's a OR expr!")
-            or_head = OrExpr()
-            create_or_expr(or_head, x)
-            or_head.print_tree(False)
-            and_head.add_child(or_head)
+            if len(x) == 1:
+                print("It's a single expression!")
+                new_expr = Expr()
+                new_expr.var_as_str = x[0]
+                x.pop(0)
+                and_heads.append(new_expr)
+            else:
+                print("It's a OR expr!")
+                or_head = OrExpr()
+                create_or_expr(or_head, x)
+                or_head.print_tree(False)
+                and_head.add_child(or_head)
+                and_heads.append(or_head)
 
     print(orElems)
 
-    and_head.print_tree()
+    print("Printing and_heads: ")
+    total_tree = generate_and_tree(and_heads)
+    total_tree.print_tree()
 
 
 
