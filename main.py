@@ -2,6 +2,8 @@
 from sympy.logic.boolalg import to_cnf
 from sympy import *
 from sympy.abc import A, B, D
+
+
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
@@ -11,17 +13,27 @@ from sympy.abc import A, B, D
 # Plausability table
 
 # Consistency check
-def convertAndPrintCNF(expr_inpt):
+def convert_print_to_cnf(expr_inpt):
     expr_inpt = expr_inpt.split(",")
-    CNF_array  = []
+    CNF_array = []
     for i in range(0, len(expr_inpt)):
         CNF_array.append(to_cnf(expr_inpt[i]))
     return CNF_array
 
+
+def remove_exess(in_str):
+    in_str = in_str.replace("[", "")
+    in_str = in_str.replace("(", "")
+    in_str = in_str.replace(")", "")
+    in_str = in_str.replace("]", "")
+    in_str = in_str.replace(" ", "")
+    return in_str
+
+
 class Expr:
-    var_ref = None      # Reference to variable
+    var_ref = None  # Reference to variable
     var_as_str = ""
-    l_child = None      # Children
+    l_child = None  # Children
     r_child = None
 
     def __init__(self):
@@ -45,18 +57,19 @@ class Expr:
         self.l_child.add_child(child)
         return True
 
-    def print_tree(self, depth, is_right = False):
+    def print_tree(self, depth, is_right=False):
 
         if self.l_child is not None:
-            self.l_child.print_tree(depth+1, False)
+            self.l_child.print_tree(depth + 1, False)
         if self.r_child is not None:
-            self.r_child.print_tree(depth+1, True)
-        print("\t" * depth, end = "")
+            self.r_child.print_tree(depth + 1, True)
+        print("\t" * depth, end="")
         if is_right:
-            print("R: ", end= "")
+            print("R: ", end="")
         else:
             print("L: ", end="")
         print(self.var_as_str)
+
 
 class OrExpr(Expr):
     def print_expr_type(self):
@@ -64,7 +77,6 @@ class OrExpr(Expr):
 
     def evaluate(self):
         return self.r_child.evaluate() or self.l_child.evaluate()
-
 
 
 class AndExpr(Expr):
@@ -79,7 +91,6 @@ class AndExpr(Expr):
         return self.r_child.evaluate() and self.l_child.evaluate()
 
 
-
 class NotExpr(Expr):
     def print_expr_type(self):
         print("Im a NOT expr!")
@@ -87,6 +98,61 @@ class NotExpr(Expr):
     def evaluate(self):
         return not self.l_child.evaluate()
 
+
+class VarClass:
+    name_of_elem = ""
+    value = True
+
+    def __init__(self, name_in, val_in):
+        self.name_of_elem = name_in
+        self.value = val_in
+
+    def to_string(self):
+        return self.name_of_elem + ": " + str(self.value)
+
+    def return_val(self):
+        return self.value
+
+
+class VarTable:
+    def __init__(self):
+        self.var_list = []
+
+    def print_elems(self):
+        print("Printing list: ", end="")
+        for elem in self.var_list:
+            print(elem.to_string()+", ", end="")
+        print("")
+
+    def add_elem(self, val_str):
+        new_elem = None
+        # print("adding element! " + val_str)
+        if "~" in val_str:
+            new_elem = VarClass(val_str[1], False)
+        else:
+            new_elem = VarClass(val_str, True)
+
+        if len(self.var_list) == 0:
+            print("Added element!")
+            self.var_list.append(new_elem)
+            return True
+
+        for elem in self.var_list:
+            if elem.name_of_elem == new_elem.name_of_elem:
+                print("Element already exists!")
+                return False
+            else:
+                print("Added element!")
+                self.var_list.append(new_elem)
+                return True
+
+    # Returns value of element if not found return false
+    def return_val_of_elem(self, name_str):
+        for elem in self.var_list:
+            if elem.name_of_elem == name_str:
+                return elem.return_val()
+            else:
+                return False
 
 
 class ParenPairs:
@@ -101,11 +167,11 @@ class ParenPairs:
             return False
 
 
-
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
     belief_base = []
+    variables = VarTable()
     # First we try to implement expression: "(A&B)|C" into our code simply being able to represent it
     # Then we might add how to input a expression
     # Then we can add revision and stuff
@@ -141,10 +207,12 @@ if __name__ == '__main__':
     for i in belief_base:
         print("Eval: " + str(i.evaluate()))
 
-    #print("Eval2: "+ str(my_or.evaluate()))
+    # print("Eval2: "+ str(my_or.evaluate()))
 
     str_in = input("Input a belief in CN-Form: ")
-    str_in = str(convertAndPrintCNF(str_in))
+    str_in = "~(A|B) & (C | D) & C"
+    str_in = str(convert_print_to_cnf(str_in))
+    str_in = remove_exess(str_in)
     print(str_in)
     # Find pairs of "(" and ")"
     # Test string: ((A&B)&(C|B))&(A|B)      CNF form ->     A & B & (C|B) & (A|B)
@@ -165,27 +233,26 @@ if __name__ == '__main__':
     else:
         print("Left par: %d \t Right par: %d" % (left_par, right_par))
 
-    # things = []
 
-    subs = str_in.split("&")
+    andElems = str_in.split("&")
+    orElems = []
+    for x in range(0, len(andElems)):
+        orElems.append(andElems[x].split("|"))
 
-    for x in subs:
-        print(x)
+    for x in andElems:
+        print("andlemes: " + str(x))
+    variables.print_elems()
+    for i in range(0, len(orElems)):
+        #print("Subsub print: " + str(orElems[i]))
+        for element in orElems[i]:
+            print("variables: " + element)
+            variables.add_elem(element)
+    variables.print_elems()
 
-    head = AndExpr()
-    for i in range(0, len(subs)):
-        new_child = None
-        if subs[i].find("|"):
-            new_child = OrExpr()
-        else:
-            new_child = AndExpr()
 
-        new_child.var_as_str = subs[i]
 
-        head.add_child(new_child) # NEEDS TO BE CHANGED,, so it doesnt add strings to the head but adds expressions, maybe also add a reference to a hash map/table
 
-    head.print_tree(0)
 
-    #print("Left par: %d \t Right par: %d" % (first_right, first_left))
+    # print("Left par: %d \t Right par: %d" % (first_right, first_left))
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
