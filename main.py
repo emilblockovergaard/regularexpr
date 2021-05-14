@@ -21,9 +21,9 @@ def convert_print_to_cnf(expr_inpt):
 
 def remove_exess(in_str):
     in_str = in_str.replace("[", "")
+    in_str = in_str.replace("]", "")
     in_str = in_str.replace("(", "")
     in_str = in_str.replace(")", "")
-    in_str = in_str.replace("]", "")
     in_str = in_str.replace(" ", "")
     return in_str
 
@@ -55,18 +55,26 @@ class Expr:
         self.l_child.add_child(child)
         return True
 
-    def print_tree(self, depth, is_right=False):
-
-        if self.l_child is not None:
-            self.l_child.print_tree(depth + 1, False)
-        if self.r_child is not None:
-            self.r_child.print_tree(depth + 1, True)
+    def print_tree(self, depth = 0, placement=0):
         print("\t" * depth, end="")
-        if is_right:
+        if placement == 0:
+            print("Head: ", end="")
+        elif placement == 1:
+            print("L: ", end="")
+        elif placement == 2:
             print("R: ", end="")
         else:
-            print("L: ", end="")
+            print("Not: ", end="")
+
         print(self.var_as_str)
+
+        if self.l_child is not None and isinstance(self, NotExpr):
+            self.l_child.print_tree(depth+1, 3)
+        elif self.l_child is not None:
+            self.l_child.print_tree(depth + 1, 1)
+        if self.r_child is not None:
+            self.r_child.print_tree(depth + 1, 2)
+
 
 
 class OrExpr(Expr):
@@ -164,6 +172,40 @@ class ParenPairs:
         else:
             return False
 
+# Takes a list of strings, this list should be split by character '|'
+def create_or_expr(start_node, or_list):
+    if len(or_list) == 1:
+        new_node = Expr()
+        new_node.var_as_str = or_list[0]
+        or_list.pop(0)
+        return
+
+    if len(or_list) > 2: # more than 2 elements in list?
+        left_var = Expr()
+        left_var.var_as_str = or_list[0]
+        or_list.pop(0)
+        start_node.l_child = left_var
+
+        start_node.r_child = OrExpr()
+        create_or_expr(start_node.r_child, or_list)
+    else:
+        left_var = Expr()
+        left_var.var_as_str = or_list[0]
+        or_list.pop(0)
+        start_node.l_child = left_var
+
+        right_var = Expr()
+        right_var.var_as_str = or_list[0]
+        or_list.pop(0)
+        start_node.r_child = right_var
+
+
+def create_not_expr(start_node, list_in):
+    child = Expr()
+    child.var_as_str = list_in[0][1]
+    list_in.pop(0)
+    start_node.add_child(child)
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -174,85 +216,80 @@ if __name__ == '__main__':
     # Then we might add how to input a expression
     # Then we can add revision and stuff
 
-    # Variables/table
-    var_a = True
-    var_b = False
-    var_c = True
 
-    my_and = AndExpr()
 
-    and_left = Expr()
-    and_left.var_ref = var_a
-
-    and_right = Expr()
-    and_right.var_ref = var_b
-
-    my_and.add_child(and_left)
-    my_and.add_child(and_right)
-
-    my_or = OrExpr()
-
-    left_1 = Expr()
-    left_1.var_ref = var_c
-
-    print("test")
-
-    my_or.add_child(left_1)
-    my_or.add_child(my_and)
-
-    belief_base.append(my_or)
-
-    for i in belief_base:
-        print("Eval: " + str(i.evaluate()))
-
-    # print("Eval2: "+ str(my_or.evaluate()))
-
-    str_in = input("Input a belief in CN-Form: ")
-    str_in = "~(A|B) & (C >> D) & C" # Remove this
+    str_in = input("Input a belief in CN-Form (make sure it's valid!): ")
+    #str_in = "(A|B|C) & ~D" # Remove this
+    str_in = "(A|B|C|D) & ~G" # Remove this
     str_in = str(convert_print_to_cnf(str_in))
     str_in = remove_exess(str_in)
     print(str_in)
+
     # Find pairs of "(" and ")"
     # Test string: ((A&B)&(C|B))&(A|B)      CNF form ->     A & B & (C|B) & (A|B)
     # (A&B)&C -> A&B&C
+    #
+    # pair_list = []
+    #
+    # left_par = 0
+    # right_par = 0
+    # for chara in str_in:
+    #     if chara == '(':
+    #         left_par += 1
+    #     if chara == ')':
+    #         right_par += 1
+    #
+    # if left_par != right_par:
+    #     print("Error in input not equal amount of parenthesis!")
+    # else:
+    #     print("Left par: %d \t Right par: %d" % (left_par, right_par))
 
-    pair_list = []
-
-    left_par = 0
-    right_par = 0
-    for chara in str_in:
-        if chara == '(':
-            left_par += 1
-        if chara == ')':
-            right_par += 1
-
-    if left_par != right_par:
-        print("Error in input not equal amount of parenthesis!")
-    else:
-        print("Left par: %d \t Right par: %d" % (left_par, right_par))
 
 
-    andElems = str_in.split("&") # Create array of elements separated by AND's
+    andElems = list(str_in.split("&")) # Create array of elements separated by AND's
     orElems = []
+
     for x in range(0, len(andElems)):
         orElems.append(andElems[x].split("|"))
 
-    for x in andElems:
-        print("andlemes: " + str(x))
-    variables.print_elems()
-    for i in range(0, len(orElems)):
-        #print("Subsub print: " + str(orElems[i]))
-        for element in orElems[i]:
-            print("variables: " + element)
-            variables.add_elem(element)
+    # #variables.print_elems()
+    # for i in range(0, len(orElems)):
+    #     #print("Subsub print: " + str(orElems[i]))
+    #     for element in orElems[i]:
+    #         print("variables: " + element)
+    #         #variables.add_elem(element)
+    #
+    # #variables.print_elems()
 
-    variables.print_elems()
+    # Create a tree from OR
+    or_head = None
+    not_head = None
+    and_head = AndExpr()
+    print("Printing or-elems: ", end="")
+    print(orElems)
+    print("\nPrinting or elems: ")
+    for x in orElems:
+        print(x)
+        if x[0][0]== '~':
+            print("It's a NOT expr!")
+            not_head = NotExpr()
+            create_not_expr(not_head, x)
+            and_head.add_child(not_head)
+        else:
+            print("It's a OR expr!")
+            or_head = OrExpr()
+            create_or_expr(or_head, x)
+            or_head.print_tree(False)
+            and_head.add_child(or_head)
+
+    print(orElems)
+
+    and_head.print_tree()
 
 
-def create_exr_from_string(string_in):
-    head_expr = Expr()
-    if "|" in string_in:
-        new_expr = OrExpr()
+
+
+
 
 
 
