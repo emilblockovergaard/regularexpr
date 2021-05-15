@@ -256,8 +256,8 @@ if __name__ == '__main__':
     str_in = input("Input a belief in CN-Form (make sure it's valid!): ")
     #str_in = "(A|B|C) & ~D" # Remove this
     #str_in = "(A|B|C) & (D<<G & D >>G)" # Remove this
-    #str_in = "(A|B|C|D) & G & K & P & ~L & ~M, A | B" # Remove this
-    str_in = "C & (B | ~C)" # Remove this
+    str_in = "(A|B|C|D) & G & K & P & ~L & ~M, A | B" # Remove this
+    #str_in = "C & (B | ~C)" # Remove this
     str_in = str(convert_print_to_cnf(str_in))
     str_cpy = str_in
     str_in = remove_exess(str_in)
@@ -379,6 +379,26 @@ if __name__ == '__main__':
     print(variable_dict)
     for i in range(0, len(belief_base)):
         print("Testing the " + str(i) + "th belief: " + str(belief_base[i].evaluate()))
+
+    ### TODO 1.  Ask for a contradicting belief. 2. Let the user input a belief, which they know is true.
+    ### TODO 4. Optain a checkSeq that checks a sequence of elements, throghout the variable dict.
+
+    usr_choice = input("Enter a possiblity to do: \n Press r to enter a truth statement for revision ")
+    if usr_choice == "r":
+        usr_input_truth = input("Enter a truth statement on the form of Literal, True/False:\n Example: G,False: \n")
+    usr_input_truth_list = usr_input_truth.split(",")
+    variable = usr_input_truth_list[0]
+    variable_boolean = None
+    if usr_input_truth_list[1].lower().strip() == "false":
+        variable_boolean = False
+    elif usr_input_truth_list[1].lower().strip() == "true":
+        variable_boolean = True
+    print(variable_boolean)
+    #Dictionary of set, to test from
+    checkDict = {}
+    #input the name of the variable and the truth value from user input to a dictionary for checking with the existing dictionary.
+    checkDict.update({variable,variable_boolean})
+    print(checkDict)
 
 
 
