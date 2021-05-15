@@ -241,6 +241,13 @@ def string_to_node(string_in):
         new_head.var_as_str = string_in[0:]
     return new_head
 
+# Returns true if the whole belief-list evaluates to true otherwise return False
+def test_belief(belief_list):
+    for index in range(0, len(belief_list)):
+        if not belief_list[index].evaluate():
+            return False
+    return True
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
@@ -254,10 +261,10 @@ if __name__ == '__main__':
     # Base = {(A|B),(~A&~B)}
 
     str_in = input("Input a belief in CN-Form (make sure it's valid!): ")
-    #str_in = "(A|B|C) & ~D" # Remove this
+    str_in = "(A|B|C) & ~D" # Remove this
     #str_in = "(A|B|C) & (D<<G & D >>G)" # Remove this
     #str_in = "(A|B|C|D) & G & K & P & ~L & ~M, A | B" # Remove this
-    str_in = "C & (B | ~C), C" # Remove this
+    #str_in = "C & (B | ~C), C" # Remove this
     str_in = str(convert_print_to_cnf(str_in))
     str_cpy = str_in
     str_in = remove_exess(str_in)
@@ -326,10 +333,49 @@ if __name__ == '__main__':
         belief_base.append(total_tree)
 
     print(variable_dictionary)
-    for i in range(0, len(belief_base)):
-        print("Testing the " + str(i) + "th belief: " + str(belief_base[i].evaluate()))
+
+    # Test/find a world where the belief base is possible
+    print(len(variable_dictionary.keys()))
+
+    variable_dictionary["C"] = False
+    variable_dictionary["B"] = False
+    variable_dictionary_copy = variable_dictionary.copy()
+    print("Testing belief base: " + str(test_belief(belief_base)))
+
+    variable_dictionary = variable_dictionary_copy
+    print("Testing belief base: " + str(test_belief(belief_base)))
+
+    variable_dictionary_copy["C"] = True
+    print("Testing belief base: " + str(test_belief(belief_base)))
+
+    # Generate 2^N dictionaries.
+    worlds = []
+    number = 0
+    key_list = list(variable_dictionary.keys())
+    print(key_list)
+    for x in range(0, 2**len(variable_dictionary)):
+        worlds.append(variable_dictionary.copy())
+        #print(format(number, '04b'))
+
+        for n in range(0,len(key_list)):
+            if number & (1 << n):
+                #print("True at: " + str(number & (1 << n)))
+                worlds[x][key_list[n]] = True
+            else:
+                worlds[x][key_list[n]] = False
+        number += 1
+
+    print(worlds)
+
+    # Now test each world and add valid worlds to a list
+    valid_worlds = []
+    for x in range(0, len(worlds)):
+        variable_dictionary = worlds[x]
+        if test_belief(belief_base):
+            valid_worlds.append(worlds[x])
+    print("Valid worlds:")
+    print(valid_worlds)
 
 
-    # print("Left par: %d \t Right par: %d" % (first_right, first_left))
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
