@@ -1,5 +1,6 @@
 # This is a sample Python script.
 import sys
+import time
 
 from sympy import *
 
@@ -19,12 +20,17 @@ def convert_print_to_cnf(expr_inpt):
         CNF_array.append(to_cnf(expr_inpt[i]))
     return CNF_array
 
+def str_to_cnf_str(string_in):
+    return str(to_cnf(string_in)).strip()
+
 
 def remove_exess(in_str):
     in_str = in_str.replace("[", "")
     in_str = in_str.replace("]", "")
     in_str = in_str.replace("(", "")
     in_str = in_str.replace(")", "")
+    in_str = in_str.replace("{", "")
+    in_str = in_str.replace("}", "")
     in_str = in_str.replace(" ", "")
     return in_str
 
@@ -135,31 +141,25 @@ def create_or_head(or_list):
         or_list.append(new_or_node)
     return or_list[0]
 
-
-def create_not_expr(start_node, list_in):
-    child = Expr()
-    child.var_as_str = list_in[0][1]
-    list_in.pop(0)
-    start_node.add_child(child)
-
+# Generates an and tree from a list of things that should be "AND'ed", the list should contain nodes of type Expr or subclasses
 def generate_and_tree(and_list_in):
     tree_head = AndExpr()
 
-    print(and_list_in)
+    #print(and_list_in)
     while len(and_list_in)> 1:
-        print("Combining an AND pair")
+        #print("Combining an AND pair")
         combined = AndExpr()
         combined.add_child(and_list_in[0])
         combined.add_child(and_list_in[1])
         and_list_in.pop(0)
         and_list_in.pop(0)
         and_list_in.append(combined)
-    else:
-        print("Only 2 or less nodes!")
-    print(and_list_in)
+
+    #print(and_list_in)
 
     return and_list_in[0]
 
+# Creates a Expr node or a NotExpr based on the string_in, this is used at the bottom when generating a tree
 def var_str_to_expr(string_in):
     #if the element is a NOT we create child's accordingly
     if string_in[0] == '~':
@@ -172,6 +172,16 @@ def var_str_to_expr(string_in):
         new_head = Expr()
         new_head.var_as_str = string_in[0:]
     return new_head
+
+# Tests a tree with a certain world
+def test_tree(start_node, world_state):
+    global variable_dictionary
+    temp_dict = variable_dictionary
+
+    variable_dictionary = world_state
+    return_val = start_node.evaluate()
+    variable_dictionary = temp_dict
+    return return_val
 
 # Returns true if the whole belief-list evaluates to true otherwise return False
 def test_belief(belief_list):
@@ -258,7 +268,7 @@ class BeliefBase:
     def print_base_strings(self):
         print("Printing belief base in strings:")
         for elem in self.list_of_beliefs:
-            print("\t{ " + elem.cnf_string + " }")
+            print("\t" + elem.cnf_string + ",")
 
     def print_base_trees(self):
         print("Printing belief base in tree:")
@@ -267,16 +277,38 @@ class BeliefBase:
             print("")
 
     def expand_base(self, cnf_string_in):
-        self.list_of_beliefs.append(BeliefNode(cnf_string_in))
+        for elem in self.list_of_beliefs:
+            if convert_print_to_cnf(elem.cnf_string) == convert_print_to_cnf(cnf_string_in):
+                print("Tried to add: "+ cnf_string_in +", belief already exists!")
+                return False
+        print("Adding: " + str(cnf_string_in))
+        self.list_of_beliefs.append(BeliefNode(str(cnf_string_in)))
+        return True
 
     def contract_base(self, cnf_string_in):
         for elem in self.list_of_beliefs:
-            if convert_print_to_cnf(elem.cnf_string) == cnf_string_in:
+            if str_to_cnf_str(elem.cnf_string) == str_to_cnf_str(cnf_string_in):
                 self.list_of_beliefs.remove(elem)
-                print("Removed element!")
+                print("Removed element: " + str(cnf_string_in))
                 return True
-        print("Couldn't find element!")
+        print("Tried to remove: " + cnf_string_in +", couldn't find element!")
         return False
+
+    def evaluate_all(self, print_each = False):
+        global variable_dictionary
+        print("Evaluating based on this state: " + str(variable_dictionary))
+        return_val = True
+        # Go through the list
+        for elem in self.list_of_beliefs:
+            # If one of the belief doesn't evaluate to true within the current state/world we return false
+            if not elem.cnf_tree.evaluate():
+                return_val = False
+
+            if print_each:
+                print("\t"+str(elem.cnf_tree.evaluate()))
+
+        # We return true if we get through all the beliefs
+        return return_val
 
 
 class BeliefNode:
@@ -296,6 +328,11 @@ class BeliefNode:
     def update_string_from_tree(self):
         cnf_string = "fuck"
 
+def string_from_tree(start_expr_node, out_str):
+    # If normal expression:
+    if not(isinstance(start_expr_node, OrExpr) or isinstance(start_expr_node, AndExpr) or isinstance(start_expr_node, NotExpr)):
+        out_str += start_expr_node.var_as_str
+
 # Takes a non-stripped string in CN-Form and creates a tree based on this, returns the head to the tree
 def create_tree_from_string(string_in_raw):
     string_in = remove_exess(string_in_raw)
@@ -308,9 +345,9 @@ def create_tree_from_string(string_in_raw):
 
     # Create a tree from OR
     and_heads = []
-    print("Printing or-elems: ", end="")
-    print(or_elements)
-    print("\nGenerating nodes: ")
+    #print("Printing or-elems: ", end="")
+    #print(or_elements)
+    #print("\nGenerating nodes: ")
 
     # Loop through the list of lists
     for x in or_elements:
@@ -329,11 +366,11 @@ def create_tree_from_string(string_in_raw):
             # Combine the or_list and add the generated head to the and_list:
             and_heads.append(create_or_head(or_heads))
 
-    print(or_elements)
+    #print(or_elements)
 
-    print("\n\nPrinting and_heads and the generated tree: ")
+    #print("\n\nPrinting and_heads and the generated tree: ")
     total_tree = generate_and_tree(and_heads)
-    total_tree.print_tree()
+    #total_tree.print_tree()
     return total_tree
 
 
@@ -350,15 +387,17 @@ if __name__ == '__main__':
 
     str_in = input("Input a belief in CN-Form (make sure it's valid!): ")
     #str_in = "~D & (A | B | C)" # Remove this
-    str_in = "(~r | p | s) & (~p | r) & (~s | r) & ~r, a | b"
+    str_in = "{(~r | p | s) & (~p | r) & (~s | r) & ~r}, {a | b},f & d"
     # str_in = "A | B"
     #str_in = "(r >> (p | s) & (p | s) >> r) & ~r"
     #str_in = "(A|B|C) & (D<<G & D >>G)" # Remove this
     #str_in = "(A|B|C|D) & G & K & P & ~L & ~M, A | B" # Remove this
     #str_in = "C & (B | ~C), C" # Remove this
 
-    # Convert the user input to CNF
-    str_in = str(convert_print_to_cnf(str_in)).replace("[","").replace("]","")
+    # Strip and convert the user input to a CNF string
+    print("Test: " + str_to_cnf_str(str_in))
+    str_in = str(convert_print_to_cnf(str_in)).replace("[","").replace("]","").replace("{","").replace("}","")
+    print(str_in)
 
     # Add all variable names to a dictionary
     test_str = remove_exess(str_in).replace(",","").replace("&","").replace("|","")
@@ -375,21 +414,34 @@ if __name__ == '__main__':
     print(variable_dictionary)
 
     # Split the string, so that we can have multiple beliefs at once
-    beliefs = str_in.split(",")
+    beliefs = str_in.split(", ")
     print(beliefs)
     print("there's " + str(len(beliefs)) + " beliefs")
 
     # Add to the belief base
     while len(beliefs) > 0:
-        belief_base.expand_base(beliefs[0])
+        belief_base.expand_base(str_to_cnf_str(beliefs[0]))
         beliefs.pop(0)
 
     belief_base.print_base_strings()
 
-    belief_base.contract_base(convert_print_to_cnf("a | b"))
+    belief_base.contract_base(str_to_cnf_str("a | b"))
 
     belief_base.print_base_strings()
 
+    belief_base.expand_base(str_to_cnf_str("a & b"))
+    belief_base.print_base_strings()
+
+    belief_base.expand_base(str_to_cnf_str("a & b"))
+
+    belief_base.print_base_strings()
+
+    # Change all values to False
+    variable_dictionary = dict.fromkeys(variable_dictionary, False)
+
+    print(belief_base.evaluate_all(True))
+
+    time.sleep(0.1)
     sys.exit("Stopped on purpose")
 
     print(variable_dictionary)
@@ -412,25 +464,18 @@ if __name__ == '__main__':
     generate_list_split_and(belief_base[0], check_dict, new_list)
 
     dict_list = []
-    generate_dictionaries(new_list, dict_list)
 
-def generate_dictionaries(list_of_heads, dict_list_for_append):
-    return False
-    # go through list of heads
-    # for each head we will go to expresions or not's and add the var_as_str to a dict,
-    #  finally we add this dict to the list
 
-# Will return a dict for a head
-def visit_node(start_node, dict_for_append):
-    # If we reach a node that isn't a OR or AND we can return add it to a dict
-    if not (isinstance(start_node, OrExpr) or isinstance(start_node, AndExpr)):
-        if isinstance(start_node, NotExpr):
-            dict_for_append[start_node.l_child.var_as_str] = False
-        else:
-            dict_for_append[start_node.l_child.var_as_str] = False
-
-    return dict_for_append
-
+# TODO:
+#   a while loop where user can input 4 letters  "r, c, e, p"
+#       r: will revise the base with a belief
+#       c: contract a belief from the base
+#       e: will expand the base with a belief
+#       p: will print the base
+#   revision, a system where adding a new belief also changes the current beliefs
+#       resolution algorithm
+#       perhaps a method could be similar to 1:24:00 in lecture 8
+#
 
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
