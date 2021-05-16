@@ -1,4 +1,5 @@
 # This is a sample Python script.
+import sys
 
 from sympy import *
 
@@ -70,7 +71,7 @@ class Expr:
         elif placement == 2:
             print("R: ", end="")
         else:
-            print("Not: ", end="")
+            print("Child: ", end="")
 
         print(str(type(self))[17:-2], end="  ")
         print(self.var_as_str)
@@ -83,8 +84,6 @@ class Expr:
             if self.r_child is not None:
                 self.r_child.print_tree(depth + 1, 2)
 
-
-
 class OrExpr(Expr):
     r_child = None
     def print_expr_type(self):
@@ -92,7 +91,6 @@ class OrExpr(Expr):
 
     def evaluate(self):
         return self.r_child.evaluate() or self.l_child.evaluate()
-
 
 class AndExpr(Expr):
     r_child = None
@@ -105,7 +103,6 @@ class AndExpr(Expr):
             return False
 
         return self.r_child.evaluate() and self.l_child.evaluate()
-
 
 class NotExpr(Expr):
     def print_expr_type(self):
@@ -123,71 +120,6 @@ class NotExpr(Expr):
             print(child, end=" of type ")
             print(str(type(child))[17:-2])
 
-            return False
-
-class VarClass:
-    name_of_elem = ""
-    value = True
-
-    def __init__(self, name_in, val_in):
-        self.name_of_elem = name_in
-        self.value = val_in
-
-    def to_string(self):
-        return self.name_of_elem + ": " + str(self.value)
-
-    def return_val(self):
-        return self.value
-
-class VarTable:
-    def __init__(self):
-        self.var_list = []
-
-    def print_elems(self):
-        print("Printing list: ", end="")
-        for elem in self.var_list:
-            print(elem.to_string()+", ", end="")
-        print("")
-
-    def add_elem(self, val_str):
-        new_elem = None
-        # print("adding element! " + val_str)
-        if "~" in val_str:
-            new_elem = VarClass(val_str[1], False)
-        else:
-            new_elem = VarClass(val_str, True)
-
-        if len(self.var_list) == 0:
-            print("Added element!")
-            self.var_list.append(new_elem)
-            return True
-
-        for elem in self.var_list:
-            if elem.name_of_elem == new_elem.name_of_elem:
-                print("Element already exists!")
-                return False
-            else:
-                print("Added element!")
-                self.var_list.append(new_elem)
-                return True
-
-    # Returns value of element if not found return false
-    def return_val_of_elem(self, name_str):
-        for elem in self.var_list:
-            if elem.name_of_elem == name_str:
-                return elem.return_val()
-            else:
-                return False
-
-class ParenPairs:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-
-    def is_index_in_pair(self, x):
-        if self.right > x > self.left:
-            return True
-        else:
             return False
 
 
@@ -228,7 +160,7 @@ def generate_and_tree(and_list_in):
 
     return and_list_in[0]
 
-def string_to_node(string_in):
+def var_str_to_expr(string_in):
     #if the element is a NOT we create child's accordingly
     if string_in[0] == '~':
         print("It's a NOT expr!")
@@ -248,12 +180,168 @@ def test_belief(belief_list):
             return False
     return True
 
-# Press the green button in the gutter to run the script.
+# Test/find a world where the belief base is possible
+def find_worlds(dict_in):
+    print(len(dict_in.keys()))
+
+    #variable_dictionary["C"] = False
+    #variable_dictionary["B"] = False
+    variable_dictionary_copy = dict_in.copy()
+
+
+    # Generate 2^N dictionaries.
+    worlds = []
+    number = 0
+    key_list = list(dict_in.keys())
+    print(key_list)
+    for x1 in range(0, 2**len(dict_in)):
+        worlds.append(dict_in.copy())
+        #print(format(number, '04b'))
+
+        for n in range(0,len(key_list)):
+            if number & (1 << n):
+                #print("True at: " + str(number & (1 << n)))
+                worlds[x1][key_list[n]] = True
+            else:
+                worlds[x1][key_list[n]] = False
+        number += 1
+
+    print("\nAll possible worlds based on the variables:")
+    print(worlds)
+
+    # Now test each world and add valid worlds to a list
+    valid_worlds = []
+    for x1 in range(0, len(worlds)):
+        global variable_dictionary
+        variable_dictionary = worlds[x1]
+        #print(variable_dictionary)
+        #print("Testing world " + str(x1) + " : " + str(test_belief(belief_base)))
+        if test_belief(belief_base):
+            valid_worlds.append(worlds[x1])
+    print("\nValid worlds:")
+    print(valid_worlds)
+
+def generate_and_list(start_node, list_to_append_to):
+    if not isinstance(start_node, AndExpr):
+        list_to_append_to.append(start_node)
+        return
+
+    if start_node.l_child is not None:
+        print("going to left child")
+        generate_and_list(start_node.l_child, list_to_append_to)
+    if isinstance(start_node, AndExpr) or isinstance(start_node, OrExpr):
+        print("going to right child")
+        if start_node.r_child is not None: generate_and_list(start_node.r_child, list_to_append_to)
+
+def generate_list_split_and(start_node, compare_dict, and_list):
+    # create a list for checking
+    generate_and_list(start_node, and_list)
+    print("Printing clauses:")
+    for elem in and_list:
+        print(elem.print_tree(),end="\n\n")
+
+    for elem in and_list:
+        while False:
+            print("")
+
+    if isinstance(start_node, OrExpr) or isinstance(start_node, AndExpr):
+        if not(isinstance(start_node.l_child, OrExpr) or isinstance(start_node.l_child, AndExpr)):
+            # we can check left child's key/
+            print("tada")
+
+class BeliefBase:
+    list_of_beliefs = []
+
+    def __init__(self):
+        pass
+
+    def print_base_strings(self):
+        print("Printing belief base in strings:")
+        for elem in self.list_of_beliefs:
+            print("\t{ " + elem.cnf_string + " }")
+
+    def print_base_trees(self):
+        print("Printing belief base in tree:")
+        for elem in self.list_of_beliefs:
+            elem.cnf_tree.print_tree()
+            print("")
+
+    def expand_base(self, cnf_string_in):
+        self.list_of_beliefs.append(BeliefNode(cnf_string_in))
+
+    def contract_base(self, cnf_string_in):
+        for elem in self.list_of_beliefs:
+            if convert_print_to_cnf(elem.cnf_string) == cnf_string_in:
+                self.list_of_beliefs.remove(elem)
+                print("Removed element!")
+                return True
+        print("Couldn't find element!")
+        return False
+
+
+class BeliefNode:
+    cnf_string = ""
+    cnf_tree = None
+
+    def __init__(self, string_in):
+        self.cnf_string = string_in
+        self.cnf_tree = create_tree_from_string(string_in)
+
+    def print_string(self):
+        print(self.cnf_string)
+
+    def print_the_tree(self):
+        self.cnf_tree.print_tree()
+
+    def update_string_from_tree(self):
+        cnf_string = "fuck"
+
+# Takes a non-stripped string in CN-Form and creates a tree based on this, returns the head to the tree
+def create_tree_from_string(string_in_raw):
+    string_in = remove_exess(string_in_raw)
+    and_elements = list(string_in.split("&")) # Create array of elements separated by AND's
+    or_elements = []
+
+    #Create list of lists
+    for x in range(0, len(and_elements)):
+        or_elements.append(and_elements[x].split("|"))
+
+    # Create a tree from OR
+    and_heads = []
+    print("Printing or-elems: ", end="")
+    print(or_elements)
+    print("\nGenerating nodes: ")
+
+    # Loop through the list of lists
+    for x in or_elements:
+        # If it only contains one member we create a node from this:
+        if len(x) == 1:
+            # Add to the list of and heads
+            and_heads.append(var_str_to_expr(x[0]))
+
+        # Otherwise we can see it's a OR-list:
+        else:
+            or_heads = []
+            for k in x:
+                # Add to the smaller list of Or heads that will be combined afterwards:
+                or_heads.append(var_str_to_expr(k))
+
+            # Combine the or_list and add the generated head to the and_list:
+            and_heads.append(create_or_head(or_heads))
+
+    print(or_elements)
+
+    print("\n\nPrinting and_heads and the generated tree: ")
+    total_tree = generate_and_tree(and_heads)
+    total_tree.print_tree()
+    return total_tree
+
+
 if __name__ == '__main__':
 
-    belief_base = []
+    belief_base = BeliefBase()
+    global variable_dictionary
     variable_dictionary = {}
-    variables = VarTable()
     # First we try to implement expression: "(A&B)|C" into our code simply being able to represent it
     # Then we might add how to input a expression
     # Then we can add revision and stuff
@@ -261,25 +349,24 @@ if __name__ == '__main__':
     # Base = {(A|B),(~A&~B)}
 
     str_in = input("Input a belief in CN-Form (make sure it's valid!): ")
-    str_in = "(A|B|C) & ~D" # Remove this
+    #str_in = "~D & (A | B | C)" # Remove this
+    str_in = "(~r | p | s) & (~p | r) & (~s | r) & ~r, a | b"
+    # str_in = "A | B"
+    #str_in = "(r >> (p | s) & (p | s) >> r) & ~r"
     #str_in = "(A|B|C) & (D<<G & D >>G)" # Remove this
     #str_in = "(A|B|C|D) & G & K & P & ~L & ~M, A | B" # Remove this
     #str_in = "C & (B | ~C), C" # Remove this
-    str_in = str(convert_print_to_cnf(str_in))
-    str_cpy = str_in
-    str_in = remove_exess(str_in)
-    print(str_cpy)
-    print(str_in)
+
+    # Convert the user input to CNF
+    str_in = str(convert_print_to_cnf(str_in)).replace("[","").replace("]","")
 
     # Add all variable names to a dictionary
-    test_str = str_in.replace(",","").replace("&","").replace("|","")
+    test_str = remove_exess(str_in).replace(",","").replace("&","").replace("|","")
     print(test_str)
     i=0
     while i < len(test_str):
         if test_str[i] == '~':
-            print("it's a not")
             i+=1
-            print(test_str[i])
             variable_dictionary[test_str[i]] = False
         else:
             variable_dictionary[test_str[i]] = True
@@ -287,94 +374,62 @@ if __name__ == '__main__':
 
     print(variable_dictionary)
 
+    # Split the string, so that we can have multiple beliefs at once
     beliefs = str_in.split(",")
     print(beliefs)
     print("there's " + str(len(beliefs)) + " beliefs")
+
+    # Add to the belief base
     while len(beliefs) > 0:
-        andElems = list(beliefs[0].split("&")) # Create array of elements separated by AND's
+        belief_base.expand_base(beliefs[0])
         beliefs.pop(0)
-        orElems = []
 
-        for x in range(0, len(andElems)):
-            orElems.append(andElems[x].split("|"))
+    belief_base.print_base_strings()
 
-        # Create a tree from OR
-        or_head = None
-        not_head = None
-        and_head = AndExpr()
-        and_heads = []
-        print("Printing or-elems: ", end="")
-        print(orElems)
-        print("\nGenerating nodes: ")
+    belief_base.contract_base(convert_print_to_cnf("a | b"))
 
-        # Loop through the list of lists
-        for x in orElems:
-            # If it only contains one member we create a node from this:
-            if len(x) == 1:
-                # Add to the list of and heads
-                and_heads.append(string_to_node(x[0]))
+    belief_base.print_base_strings()
 
-            # Otherwise we can see it's a or list:
-            else:
-                or_heads = []
-                for k in x:
-                    # Add to the smaller list of Or heads that will be combined afterwards:
-                    or_heads.append(string_to_node(k))
-
-                # Combine the or_list and add the generated head to the and_list:
-                and_heads.append(create_or_head(or_heads))
-
-
-        print(orElems)
-
-        print("\n\nPrinting and_heads: ")
-        total_tree = generate_and_tree(and_heads)
-        total_tree.print_tree()
-        belief_base.append(total_tree)
+    sys.exit("Stopped on purpose")
 
     print(variable_dictionary)
+    print(belief_base[0].evaluate())
+    print("Changing A and B")
+    variable_dictionary['A'] = False
+    variable_dictionary['B'] = False
+    print(belief_base[0].evaluate())
+    find_worlds(variable_dictionary)
+    # Go through tree
+    # When at normal expression check if it contradicts the new check base
+    check_dict = {'p': False}
 
-    # Test/find a world where the belief base is possible
-    print(len(variable_dictionary.keys()))
+    new_knowledge = input("Input a newly gained knowledge: ")
+    converted = convert_print_to_cnf(new_knowledge)
+    print(converted)
+    # Generate a tree from this new line
 
-    variable_dictionary["C"] = False
-    variable_dictionary["B"] = False
-    variable_dictionary_copy = variable_dictionary.copy()
-    print("Testing belief base: " + str(test_belief(belief_base)))
+    new_list = []
+    generate_list_split_and(belief_base[0], check_dict, new_list)
 
-    variable_dictionary = variable_dictionary_copy
-    print("Testing belief base: " + str(test_belief(belief_base)))
+    dict_list = []
+    generate_dictionaries(new_list, dict_list)
 
-    variable_dictionary_copy["C"] = True
-    print("Testing belief base: " + str(test_belief(belief_base)))
+def generate_dictionaries(list_of_heads, dict_list_for_append):
+    return False
+    # go through list of heads
+    # for each head we will go to expresions or not's and add the var_as_str to a dict,
+    #  finally we add this dict to the list
 
-    # Generate 2^N dictionaries.
-    worlds = []
-    number = 0
-    key_list = list(variable_dictionary.keys())
-    print(key_list)
-    for x in range(0, 2**len(variable_dictionary)):
-        worlds.append(variable_dictionary.copy())
-        #print(format(number, '04b'))
+# Will return a dict for a head
+def visit_node(start_node, dict_for_append):
+    # If we reach a node that isn't a OR or AND we can return add it to a dict
+    if not (isinstance(start_node, OrExpr) or isinstance(start_node, AndExpr)):
+        if isinstance(start_node, NotExpr):
+            dict_for_append[start_node.l_child.var_as_str] = False
+        else:
+            dict_for_append[start_node.l_child.var_as_str] = False
 
-        for n in range(0,len(key_list)):
-            if number & (1 << n):
-                #print("True at: " + str(number & (1 << n)))
-                worlds[x][key_list[n]] = True
-            else:
-                worlds[x][key_list[n]] = False
-        number += 1
-
-    print(worlds)
-
-    # Now test each world and add valid worlds to a list
-    valid_worlds = []
-    for x in range(0, len(worlds)):
-        variable_dictionary = worlds[x]
-        if test_belief(belief_base):
-            valid_worlds.append(worlds[x])
-    print("Valid worlds:")
-    print(valid_worlds)
+    return dict_for_append
 
 
 
