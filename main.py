@@ -346,6 +346,11 @@ class BeliefBase:
 
         new_belief_node = BeliefNode(string_in)
 
+        for elem in self.list_of_beliefs:
+            if str_to_cnf_str(elem.cnf_string) == str_to_cnf_str(new_belief_node.cnf_string):
+                print("Belief already exists!")
+                return
+
         self.add_to_dict(string_in) # make sure that if we use new variables they are added
         if len(self.list_of_beliefs) != 0:
             list_to_remove = belief_base.check_for_contradictions(new_belief_node.cnf_tree) # get a list of beliefs that can stay
@@ -359,6 +364,8 @@ class BeliefBase:
                     max_len -= 1
                     index -= 1
                 index += 1
+
+
 
         self.list_of_beliefs.append(new_belief_node) # add the new belief to the belief base
 
@@ -387,9 +394,6 @@ class BeliefNode:
 
     def print_the_tree(self):
         self.cnf_tree.print_tree()
-
-    def update_string_from_tree(self):
-        cnf_string = "fuck"
 
 # NOT DONE!
 def string_from_tree(start_expr_node, out_str):
