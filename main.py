@@ -475,28 +475,11 @@ if __name__ == '__main__':
     global variable_dictionary
     variable_dictionary = {}
 
-    print_welcome_msg()
+    print_welcome_msg() # welcome the user
 
+    # Infinite loop where user can add or remove beliefs
     while True:
         handle_user_in(belief_base)
-
-
-# TODO:
-#   a while loop where user can input 4 letters  "r, c, e, p"
-#       r: will revise the base with a belief
-#       c: contract a belief from the base
-#       e: will expand the base with a belief
-#       p: will print the base
-#   revision, a system where adding a new belief also changes the current beliefs
-#       resolution algorithm
-#           perhaps a method could be similar to 1:24:00 in lecture 8
-#
-# New idea for Resolution algorithm:
-#   Get user input for updating.
-#   Create variables in the dict
-#   Create all worlds
-#   Then loop through all worlds and check each clause
-#       We check if there's a world where both clauses are True, if the case they don't contradict and we do nothing
 
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
