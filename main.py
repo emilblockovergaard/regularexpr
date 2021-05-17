@@ -1,9 +1,6 @@
 
 # Belief revision assignment implementation
 
-import sys
-import time
-
 from sympy import *
 
 def convert_print_to_cnf(expr_inpt):
@@ -157,7 +154,7 @@ def generate_and_tree(and_list_in):
 def var_str_to_expr(string_in):
     #if the element is a NOT we create child's accordingly
     if string_in[0] == '~':
-        print("It's a NOT expr!")
+        #print("It's a NOT expr!")
         new_head = NotExpr()
         new_var_expr = Expr()
         new_var_expr.var_as_str = string_in[1:]
@@ -176,54 +173,6 @@ def test_tree(start_node, world_state):
     return_val = start_node.evaluate()
     variable_dictionary = temp_dict
     return return_val
-
-# Returns true if the whole belief-list evaluates to true otherwise return False
-def test_belief(belief_list):
-    for index in range(0, len(belief_list)):
-        if not belief_list[index].evaluate():
-            return False
-    return True
-
-# Test/find a world where the belief base is possible
-def find_worlds(dict_in):
-    print(len(dict_in.keys()))
-
-    #variable_dictionary["C"] = False
-    #variable_dictionary["B"] = False
-    variable_dictionary_copy = dict_in.copy()
-
-
-    # Generate 2^N dictionaries.
-    worlds = []
-    number = 0
-    key_list = list(dict_in.keys())
-    print(key_list)
-    for x1 in range(0, 2**len(dict_in)):
-        worlds.append(dict_in.copy())
-        #print(format(number, '04b'))
-
-        for n in range(0,len(key_list)):
-            if number & (1 << n):
-                #print("True at: " + str(number & (1 << n)))
-                worlds[x1][key_list[n]] = True
-            else:
-                worlds[x1][key_list[n]] = False
-        number += 1
-
-    print("\nAll possible worlds based on the variables:")
-    print(worlds)
-
-    # Now test each world and add valid worlds to a list
-    valid_worlds = []
-    for x1 in range(0, len(worlds)):
-        global variable_dictionary
-        variable_dictionary = worlds[x1]
-        #print(variable_dictionary)
-        #print("Testing world " + str(x1) + " : " + str(test_belief(belief_base)))
-        if test_belief(belief_base):
-            valid_worlds.append(worlds[x1])
-    print("\nValid worlds:")
-    print(valid_worlds)
 
 def generate_all_valid_worlds(node, print_things = False):
 
@@ -298,6 +247,13 @@ class BeliefBase:
     def __init__(self):
         pass
 
+    # Add new variables based on a string, if they already exist they are changed to false
+    def add_to_dict(self, string_in):
+        global variable_dictionary
+        for char in total_strip_for_dict(string_in):
+            variable_dictionary[char] = False
+
+    # Clears and adds all variables found in the belief-base-list
     def update_var_dict(self):
         global variable_dictionary
         variable_dictionary.clear()
@@ -306,12 +262,12 @@ class BeliefBase:
                 variable_dictionary[char] = False
 
     def print_base_strings(self):
-        print("Printing belief base in strings:")
+        print("Printing belief base:")
         for elem in self.list_of_beliefs:
             print("\t" + str_to_cnf_str(elem.cnf_string) + ",")
 
     def print_base_trees(self):
-        print("Printing belief base in tree:")
+        print("Printing belief base as tree(s):")
         for elem in self.list_of_beliefs:
             elem.cnf_tree.print_tree()
             print("")
@@ -350,7 +306,7 @@ class BeliefBase:
         # We return true if we get through all the beliefs
         return return_val
 
-    # NOT DONE!
+    # takes a belief node as argument, and then returns a list of booleans values of where the new belief contradicts the belief-base
     def check_for_contradictions(self, new_belief_node):
         # Divide belief base into clauses
         # Get valid worlds for each clause
@@ -360,21 +316,15 @@ class BeliefBase:
         # Compare the worlds, check that one of the worlds from a clause also evals to true in the new belief
         # if not we have a contradiction.. i think
 
-        clause_list = []#nothing
-        for elem in self.list_of_beliefs:#nothing
-            generate_and_list(elem.cnf_tree, clause_list) #nothing
-
-        print("Clause-list: " + str(clause_list))
-
         new_belief_worlds = generate_all_valid_worlds(new_belief_node)
 
-        print("New_belief_worlds: " + str(new_belief_worlds))
+        #print("New_belief_worlds: " + str(new_belief_worlds))
 
-        clause_worlds = [] #nothing
+        clause_worlds = []
         for elem in self.list_of_beliefs:
             clause_worlds.append(generate_all_valid_worlds(elem.cnf_tree))
 
-        print("Clause_worlds: " + str(clause_worlds))
+        #print("Clause_worlds: " + str(clause_worlds))
 
         # Create a list with a element for each belief
         test_val = []
@@ -388,8 +338,30 @@ class BeliefBase:
                     if elem2 == elem3: # if a world matches we set it to True
                         test_val[elem1] = True
 
-        print("Is the belief allowed to stay?: " + str(test_val))
+        #print("Is the belief allowed to stay?: " + str(test_val))
         return test_val
+
+    # Takes a string of FOL, then it adds this to the belief base, at the same time it removes beliefs that contradict the new knowledge
+    def more_real_revision(self, string_in):
+
+        new_belief_node = BeliefNode(string_in)
+
+        self.add_to_dict(string_in) # make sure that if we use new variables they are added
+        if len(self.list_of_beliefs) != 0:
+            list_to_remove = belief_base.check_for_contradictions(new_belief_node.cnf_tree) # get a list of beliefs that can stay
+
+            max_len = len(list_to_remove)
+            index = 0
+            while index < max_len:
+                if not list_to_remove[index]: # if they cant stay we remove the belief
+                    list_to_remove.pop(index)
+                    self.list_of_beliefs.pop(index)
+                    max_len -= 1
+                    index -= 1
+                index += 1
+
+        self.list_of_beliefs.append(new_belief_node) # add the new belief to the belief base
+
 
     # Remove all beliefs and insert the new one.
     def lazy_revision(self, string_in):
@@ -467,103 +439,46 @@ def create_tree_from_string(string_in_raw):
 
 def print_welcome_msg():
     str_to_print = "\n*********************************************************************************************************\n"
-    str_to_print += "Welcome to our belief revision agent!\nThis program allows you to enter beliefs into a belief-base, "
-    str_to_print += "the base will then updated correctly.\n\nThe format of input's should be as follows:\n\t1. Variables/literals should be "
-    str_to_print += "single letters.\n\t\t- The program is case-sensitive so \"A != a\".\n\t2. You can't use the letter E as a variable/literal name.\n\t3. Logical operators such as AND, OR and others are written this way:\n\t\t- AND: \"&\""
+    str_to_print += "Welcome to our belief revision agent!" \
+                    "\nThis program allows you to enter beliefs into a belief-base, the base will then updated correctly." \
+                    "\n\nThe format of input's should be as follows:" \
+                        "\n\t1. Variables/literals should be single letters." \
+                            "\n\t\t- The program is case-sensitive so \"A != a\"." \
+                        "\n\t2. You can't use the letter E as a variable/literal name." \
+                        "\n\t3. Logical operators such as AND, OR and others are written this way:\n\t\t- AND: \"&\""
     str_to_print += "\n\t\t- OR: \"|\"\n\t\t- NOT: \"~\"\n\t\t- IMPLICATION: \">>\" or \"<<\"\n\t\t- BI-IMPLICATION: \"(x >> y) & (y >> x)\""
-    str_to_print += "\n\nEnjoy!\n\n*********************************************************************************************************\n"
+    str_to_print += "\n\nEnjoy!\n\n*********************************************************************************************************"
     print(str_to_print)
+
+def handle_user_in(belief_base_ref):
+    str_in = input("\nInput a non contradicting belief: ")
+
+    # Strip and convert the user input to a CNF string
+    str_in = str(convert_print_to_cnf(str_in.replace("{","").replace("}",""))).replace("[","").replace("]","")
+    print("Input as CNF: " + str_in)
+
+    # Split the string, so that we can have multiple beliefs at once
+    beliefs = str_in.split(", ")
+
+    # Add to the belief base
+    while len(beliefs) > 0:
+        belief_base.more_real_revision(str_to_cnf_str(beliefs[0]))
+        beliefs.pop(0)
+    belief_base.print_base_strings()
 
 if __name__ == '__main__':
 
+    # Create belief-base
     belief_base = BeliefBase()
+
+    # Create dictionary for holding variables
     global variable_dictionary
     variable_dictionary = {}
 
     print_welcome_msg()
 
-    str_in = input("Input a non contradicting belief: ")
-    str_in = "a | e" # Remove this
-    # str_in = "{(~r | p | s) & (~p | r) & (~s | r) & ~r}, {a | b},f & d"
-
-
-    # Strip and convert the user input to a CNF string
-    print("Test: " + str_to_cnf_str(str_in))
-    str_in = str(convert_print_to_cnf(str_in)).replace("[","").replace("]","").replace("{","").replace("}","")
-    print(str_in)
-
-    # Add all variable names to a dictionary
-    test_str = remove_exess(str_in).replace(",","").replace("&","").replace("|","")
-    print(test_str)
-    i=0
-    while i < len(test_str):
-        if test_str[i] == '~':
-            i+=1
-            variable_dictionary[test_str[i]] = False
-        else:
-            variable_dictionary[test_str[i]] = True
-        i +=1
-
-    print(variable_dictionary)
-
-    # Split the string, so that we can have multiple beliefs at once
-    beliefs = str_in.split(", ")
-    print(beliefs)
-    print("there's " + str(len(beliefs)) + " beliefs")
-
-    # Add to the belief base
-    while len(beliefs) > 0:
-        belief_base.expand_base(str_to_cnf_str(beliefs[0]))
-        beliefs.pop(0)
-
-    belief_base.print_base_strings()
-
-    #belief_base.contract_base(str_to_cnf_str("a | b"))
-    #belief_base.print_base_strings()
-
-    #belief_base.expand_base(str_to_cnf_str("a & b"))
-    #belief_base.print_base_strings()
-
-    #belief_base.expand_base(str_to_cnf_str("a & b"))
-    #belief_base.print_base_strings()
-
-    # Change all values to False
-    variable_dictionary = dict.fromkeys(variable_dictionary, False)
-
-    # belief_base.expand_base(str_to_cnf_str("~b"))
-
-    print(belief_base.evaluate_all(True))
-
-    #belief_base.lazy_revision(str_to_cnf_str("(c | d) & a"))
-
-    generate_all_valid_worlds(belief_base.list_of_beliefs[0].cnf_tree)
-    belief_base.print_base_strings()
-    new_belief = BeliefNode("~a")
-    belief_base.check_for_contradictions(new_belief.cnf_tree)
-
-    time.sleep(0.1)
-    sys.exit("Stopped on purpose")
-
-    print(variable_dictionary)
-    print(belief_base[0].evaluate())
-    print("Changing A and B")
-    variable_dictionary['A'] = False
-    variable_dictionary['B'] = False
-    print(belief_base[0].evaluate())
-    find_worlds(variable_dictionary)
-    # Go through tree
-    # When at normal expression check if it contradicts the new check base
-    check_dict = {'p': False}
-
-    new_knowledge = input("Input a newly gained knowledge: ")
-    converted = convert_print_to_cnf(new_knowledge)
-    print(converted)
-    # Generate a tree from this new line
-
-    new_list = []
-    generate_list_split_and(belief_base[0], check_dict, new_list)
-
-    dict_list = []
+    while True:
+        handle_user_in(belief_base)
 
 
 # TODO:
